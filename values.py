@@ -15,8 +15,8 @@ class Mode:
 
 
 class Host:
-    ip = '10.10.11.118'
-    port = 502
+    ip = ''
+    port = 0
 
 
 class Device:

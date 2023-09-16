@@ -3,6 +3,7 @@ from flask import Flask
 
 import threading
 import atexit
+import os
 
 from values import Mode, Device, Register, Host
 
@@ -14,7 +15,17 @@ def get_json():
     return common_data_struct
 
 
-POOL_TIME = 10  # Seconds
+@app.route('/soc')
+def get_soc():
+    return common_data_struct["soc"]
+
+
+@app.route('/mode')
+def get_mode():
+    return common_data_struct["mode"]
+
+
+POOL_TIME = 60  # Seconds
 
 # variables that are accessible from anywhere
 common_data_struct = {}
@@ -43,14 +54,14 @@ def create_app():
                 mode = Mode.name.get(readMode)
 
                 print("Mode is: " + mode)
-                common_data_struct["mode"] = "Mode is: " + mode
+                common_data_struct["mode"] = mode
 
                 # get state of charge
                 readSoc = modbus_client.read_holding_registers(Register.soc, 1, Device.battery).registers[0]
                 soc = readSoc / 10
 
                 print("SOC is: " + str(soc) + "%")
-                common_data_struct["soc"] = "SOC is: " + str(soc) + "%"
+                common_data_struct["soc"] = str(soc)
 
                 modeToSet = 0
 
@@ -64,7 +75,6 @@ def create_app():
                     modbus_client.write_register(Register.mode, modeToSet, Device.vebus)
             except Exception as error:
                 print("An exception occurred:", error)
-
 
         # Set the next timeout to happen
         modbus_timer = threading.Timer(POOL_TIME, check_modbus, ())
@@ -85,41 +95,10 @@ def create_app():
     return app
 
 
+# Get Ip and Port from Environment
+Host.ip = os.getenv('MODBUS_HOST')
+Host.port = os.getenv('MODBUS_PORT')
+
+print("Starting App for: " + str(Host.ip) + ":" + str(Host.port))
+
 app = create_app()
-
-
-'''
-
-while True:
-    try:
-        modbus_client.connect()
-
-        # get system mode
-        readMode = modbus_client.read_holding_registers(modeAddress, 1, vebusID).registers[0]
-        mode = ReverseMode.get(readMode)
-
-        print("Mode is: " + mode)
-        displayData["mode"] = "Mode is: " + mode
-
-        # get state of charge
-        readSoc = modbus_client.read_holding_registers(socAddress, 1, batteryID).registers[0]
-        soc = readSoc / 10
-
-        print("SOC is: " + str(soc) + "%")
-        displayData["soc"] = "SOC is: " + str(soc) + "%"
-
-        modeToSet = 0
-
-        if soc < 15:
-            modeToSet = Mode.get("On")
-        elif soc > 20:
-            modeToSet = Mode.get("Inverter Only")
-
-        if readMode != modeToSet:
-            print("set mode " + ReverseMode.get(modeToSet))
-            modbus_client.write_register(modeAddress, modeToSet, vebusID)
-    except Exception as error:
-        print("An exception occurred:", error)
-
-    time.sleep(5)
-'''
