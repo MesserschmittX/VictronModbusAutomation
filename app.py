@@ -1,104 +1,82 @@
+from datetime import datetime
 from pymodbus.client import ModbusTcpClient
-from flask import Flask
-
 import threading
-import atexit
-import os
 
-from values import Mode, Device, Register, Host
-
-app = Flask(__name__)
-
-
-@app.route('/')
-def get_json():
-    return common_data_struct
-
-
-@app.route('/soc')
-def get_soc():
-    return common_data_struct["soc"]
-
-
-@app.route('/mode')
-def get_mode():
-    return common_data_struct["mode"]
-
-
-POOL_TIME = 60  # Seconds
+from values import Mode, Device, Register, Host, Common
 
 # variables that are accessible from anywhere
 common_data_struct = {}
+last_seen = datetime.now()
+log_array = []
 modbus_client = ModbusTcpClient(Host.ip, Host.port)
-# lock to control access to variable
-data_lock = threading.Lock()
-# timer handler
-modbus_timer = threading.Timer(0, lambda x: None, ())
 
 
-def create_app():
-    def interrupt():
-        global modbus_timer
-        modbus_timer.cancel()
+def check_modbus():
+    global common_data_struct
+    global modbus_client
+    global last_seen
+    try:
+        modbus_client.connect()
 
-    def check_modbus():
-        global common_data_struct
-        global modbus_timer
-        global modbus_client
-        with data_lock:
-            try:
-                modbus_client.connect()
+        # get system mode
+        readMode = modbus_client.read_holding_registers(Register.mode, 1, Device.vebus).registers[0]
+        mode = Mode.name.get(readMode)
 
-                # get system mode
-                readMode = modbus_client.read_holding_registers(Register.mode, 1, Device.vebus).registers[0]
-                mode = Mode.name.get(readMode)
+        debug("Mode : " + mode)
+        common_data_struct["mode"] = mode
 
-                print("Mode is: " + mode)
-                common_data_struct["mode"] = mode
+        # get state of charge
+        readSoc = modbus_client.read_holding_registers(Register.soc, 1, Device.battery).registers[0]
+        soc = readSoc / 10
 
-                # get state of charge
-                readSoc = modbus_client.read_holding_registers(Register.soc, 1, Device.battery).registers[0]
-                soc = readSoc / 10
+        debug("SOC  : " + str(soc) + "%")
+        common_data_struct["soc"] = str(soc)
 
-                print("SOC is: " + str(soc) + "%")
-                common_data_struct["soc"] = str(soc)
+        modeToSet = 0
 
-                modeToSet = 0
+        if soc < 15:
+            modeToSet = Mode.value.get("On")
+        elif soc > 20:
+            modeToSet = Mode.value.get("Inverter Only")
 
-                if soc < 15:
-                    modeToSet = Mode.value.get("On")
-                elif soc > 20:
-                    modeToSet = Mode.value.get("Inverter Only")
+        if readMode != modeToSet:
+            debug("set mode " + Mode.name.get(modeToSet))
+            modbus_client.write_register(Register.mode, modeToSet, Device.vebus)
 
-                if readMode != modeToSet:
-                    print("set mode " + Mode.name.get(modeToSet))
-                    modbus_client.write_register(Register.mode, modeToSet, Device.vebus)
-            except Exception as error:
-                print("An exception occurred:", error)
+        last_seen = datetime.now()
 
-        # Set the next timeout to happen
-        modbus_timer = threading.Timer(POOL_TIME, check_modbus, ())
-        modbus_timer.start()
-
-    def do_stuff_start():
-        # Do initialisation stuff here
-        global modbus_timer
-        global modbus_client
-        # Create your timer
-        modbus_timer = threading.Timer(POOL_TIME, check_modbus, ())
-        modbus_timer.start()
-
-    # Initiate
-    do_stuff_start()
-    # When you kill Flask (SIGTERM), cancels the timer
-    atexit.register(interrupt)
-    return app
+        # Loop this function
+        threading.Timer(Common.update_interval, check_modbus).start()
+    except Exception as e:
+        error("An exception occurred: " + str(e))
 
 
-# Get Ip and Port from Environment
-Host.ip = os.getenv('MODBUS_HOST')
-Host.port = os.getenv('MODBUS_PORT')
+def debug(text):
+    if Common.debug:
+        print("DEBUG: " + text)
+    add_to_log_array("DEBUG: " + text)
 
-print("Starting App for: " + str(Host.ip) + ":" + str(Host.port))
 
-app = create_app()
+def error(text):
+    print("ERROR: " + text)
+    add_to_log_array("ERROR: " + text)
+
+
+def log(text):
+    print(text)
+    add_to_log_array("LOG: " + text)
+
+
+def add_to_log_array(text):
+    global log_array
+    log_array.insert(0, text)
+    while len(log_array) > 1000:
+        log_array.pop()
+
+
+if __name__ == "__main__":
+    log("Starting App for: " + str(Host.ip) + ":" + str(Host.port))
+
+    debug("Debug mode is enabled")
+
+    threading.Timer(1, check_modbus).start()

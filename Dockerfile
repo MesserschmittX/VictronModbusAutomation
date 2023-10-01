@@ -10,6 +10,8 @@ FROM python:${PYTHON_VERSION}-slim as base
 # IP and Port for Modbus Device
 ENV MODBUS_HOST="CERBO_IP"
 ENV MODBUS_PORT=502
+ENV UPDATE_INTERVAL=60
+ENV DEBUG=False
 
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -50,4 +52,4 @@ COPY . .
 EXPOSE 8000
 
 # Run the application.
-CMD python -m flask run --host=0.0.0.0 --port=8000
+CMD python app.py

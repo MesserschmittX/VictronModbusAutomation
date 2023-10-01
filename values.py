@@ -1,3 +1,6 @@
+import os
+
+
 class Mode:
     value = {
         "Charger Only": 1,
@@ -15,8 +18,8 @@ class Mode:
 
 
 class Host:
-    ip = ''
-    port = 0
+    ip = os.getenv('MODBUS_HOST')
+    port = int(os.getenv('MODBUS_PORT')) if os.getenv('MODBUS_PORT') else 502
 
 
 class Device:
@@ -27,3 +30,8 @@ class Device:
 class Register:
     mode = 33
     soc = 266
+
+
+class Common:
+    debug = eval(os.getenv('DEBUG')) if os.getenv('DEBUG') else False
+    update_interval = int(os.getenv('UPDATE_INTERVAL')) if os.getenv('UPDATE_INTERVAL') else 60
