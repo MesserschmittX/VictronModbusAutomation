@@ -45,10 +45,11 @@ def check_modbus():
 
         last_seen = datetime.now()
 
-        # Loop this function
-        threading.Timer(Common.update_interval, check_modbus).start()
     except Exception as e:
         error("An exception occurred: " + str(e))
+
+    # Loop this function
+    threading.Timer(Common.update_interval, check_modbus).start()
 
 
 def debug(text):
@@ -74,9 +75,44 @@ def add_to_log_array(text):
         log_array.pop()
 
 
+def print_cli_commands():
+    print("###############################\n"
+          "time:\tlast update\n"
+          "log:\tlog array\n"
+          "info:\tlast data from modbus\n"
+          "quit:\tstop execution\n"
+          "debug:\ttoggle debug mode\n"
+          "###############################")
+
+
+def cli_handler():
+    run = True
+    while run:
+        command = input()
+        match command:
+            case "quit" | "q":
+                run = False
+            case "time" | "t":
+                print(last_seen)
+            case "log" | "l":
+                print(log_array)
+            case "info" | "i":
+                print(common_data_struct)
+            case "debug" | "d":
+                Common.debug = not Common.debug
+                print("Debu mode: " + str(Common.debug))
+            case other:
+                print_cli_commands()
+
+
 if __name__ == "__main__":
     log("Starting App for: " + str(Host.ip) + ":" + str(Host.port))
 
     debug("Debug mode is enabled")
 
     threading.Timer(1, check_modbus).start()
+
+    print_cli_commands()
+    # TODO use threading approach when REST Framework needs the main Thread
+    # threading.Thread(target=cli_handler).start()
+    cli_handler()
