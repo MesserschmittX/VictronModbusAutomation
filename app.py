@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from pymodbus.client import ModbusTcpClient
 import threading
@@ -88,7 +89,13 @@ def print_cli_commands():
 def cli_handler():
     run = True
     while run:
-        command = input()
+        try:
+            command = input()
+        except EOFError as e:
+            print(e)
+            time.sleep(5)
+            continue
+
         match command:
             case "quit" | "q":
                 run = False
