@@ -12,4 +12,7 @@ RUN:
 docker run --publish 8000:8000 -e MODBUS_HOST=CERBO_IP victron-modbus-automation  
 
 EXPORT IMAGE:  
-docker save victron-modbus-automation > dist/victron-modbus-automation.tar  
+docker save victron-modbus-automation -o dist/victron-modbus-automation.tar  
+
+IMPORT IMAGE:  
+docker load -i dist/victron-modbus-automation.tar  
