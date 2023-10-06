@@ -1,7 +1,7 @@
 "# VictronModbusAutomation" 
 
-Environment
-MODBUS_HOST=CERBO_IP
+Environment:  
+MODBUS_HOST=CERBO_IP  
 MODBUS_PORT=502
 
 Docker:  
