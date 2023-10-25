@@ -2,7 +2,12 @@
 
 Environment:  
 MODBUS_HOST=CERBO_IP  
-MODBUS_PORT=502
+MODBUS_PORT=502  
+
+Optional:  
+UPDATE_INTERVAL=60  
+LOG_CAPACITY=10000  
+DEBUG=False  
 
 Docker:  
 BUILD:  

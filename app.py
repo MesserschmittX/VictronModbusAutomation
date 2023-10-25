@@ -108,7 +108,7 @@ def log(text):
 def add_to_log_array(text):
     global log_array
     log_array.insert(0, text)
-    while len(log_array) > 1000:
+    while len(log_array) > Common.log_capacity:
         log_array.pop()
 
 

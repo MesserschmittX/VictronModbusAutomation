@@ -35,3 +35,4 @@ class Register:
 class Common:
     debug = eval(os.getenv('DEBUG')) if os.getenv('DEBUG') else False
     update_interval = int(os.getenv('UPDATE_INTERVAL')) if os.getenv('UPDATE_INTERVAL') else 60
+    log_capacity = int(os.getenv('LOG_CAPACITY')) if os.getenv('LOG_CAPACITY') else 10000
