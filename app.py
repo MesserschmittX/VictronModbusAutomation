@@ -32,8 +32,11 @@ def get_time():
 def get_log():
     return (str(log_array)
             .replace(",", "</div><div>")
+            .replace("'", "")
             .replace("[", "<div>")
-            .replace("]", "</div>"))
+            .replace("]", "</div>")
+            .replace("DEBUG: ", '<span style="color:blue">DEBUG: </span>')
+            .replace("ERROR: ", '<span style="color:red">ERROR: </span>'))
 
 
 @app.route("/info")
@@ -90,24 +93,28 @@ def check_modbus():
 
 
 def debug(text):
+    timestamp = str(datetime.now())
     if Common.debug:
-        print("DEBUG: " + text)
+        print(timestamp + ": " + "DEBUG: " + text)
     add_to_log_array("DEBUG: " + text)
 
 
 def error(text):
-    print("ERROR: " + text)
+    timestamp = str(datetime.now())
+    print(timestamp + ": " + "ERROR: " + text)
     add_to_log_array("ERROR: " + text)
 
 
 def log(text):
-    print(text)
+    timestamp = str(datetime.now())
+    print(timestamp + ": " + text)
     add_to_log_array("LOG: " + text)
 
 
 def add_to_log_array(text):
     global log_array
-    log_array.insert(0, text)
+    timestamp = str(datetime.now())
+    log_array.insert(0, timestamp + ": " + text)
     while len(log_array) > Common.log_capacity:
         log_array.pop()
 
