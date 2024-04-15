@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Settings Form</title>
+</head>
+<body>
+  <form action="/submit" method="post">
+    <label for="high_connect_to_grid_above">Battery high, connect to grid above:</label>
+    <input type="number" id="high_connect_to_grid_above" name="high_connect_to_grid_above" value="{{ Battery['high_connect_to_grid_above'] }}" min="0" max="100"><br><br>
+
+    <label for="high_disconnect_from_grid_below">Battery high, disconnect from grid below:</label>
+    <input type="number" id="high_disconnect_from_grid_below" name="high_disconnect_from_grid_below" value="{{ Battery['high_disconnect_from_grid_below'] }}" min="0" max="100"><br><br>
+
+    <label for="low_connect_to_grid_below">Battery Low, connect to grid below:</label>
+    <input type="number" id="low_connect_to_grid_below" name="low_connect_to_grid_below" value="{{ Battery['low_connect_to_grid_below'] }}" min="0" max="100"><br><br>
+
+    <label for="low_disconnect_from_grid_above">Battery Low, disconnect from grid above:</label>
+    <input type="number" id="low_disconnect_from_grid_above" name="low_disconnect_from_grid_above" value="{{ Battery['low_disconnect_from_grid_above'] }}" min="0" max="100"><br><br>
+
+    <label for="log_level">Log Level:</label>
+    <select id="log_level" name="log_level">
+      <option value="DEBUG" {% if Common['log_level'] == "DEBUG" %}selected{% endif %}>DEBUG</option>
+      <option value="INFO" {% if Common['log_level'] == "INFO" %}selected{% endif %}>INFO</option>
+      <option value="ERROR" {% if Common['log_level'] == "ERROR" %}selected{% endif %}>ERROR</option>
+    </select><br><br>
+
+    <input type="submit" value="Submit">
+  </form>
+</body>
+</html>

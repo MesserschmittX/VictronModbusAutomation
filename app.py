@@ -2,11 +2,13 @@ import time
 import threading
 from datetime import datetime
 from pymodbus.client import ModbusTcpClient
-from flask import Flask
+from flask import Flask, render_template, request
 
-from values import Mode, Device, Register, Host, Common
+from values import Mode, Device, Register, Host, Common, Battery
 
 app = Flask(__name__)
+app.config.from_object(__name__)
+app.config['SECRET_KEY'] = '7d441f27d441f27567d441f2b6176a'
 
 # variables that are accessible from anywhere
 common_data_struct = {}
@@ -15,12 +17,18 @@ log_array = []
 modbus_client = ModbusTcpClient(Host.ip, Host.port)
 
 
+class LogLevel:
+    DEBUG = 'DEBUG'
+    INFO = 'INFO'
+    ERROR = 'ERROR'
+
+
 @app.route("/")
 def get_home():
     return ("<div><a href=\"time\">Last Action</a></div>"
             "<div><a href=\"log\">Show Log</a></div>"
             "<div><a href=\"info\">Show last state</a></div>"
-            "<div><a href=\"debug\">Switch Debug Mode</a></div>")
+            "<div><a href=\"settings\">Settings Page</a></div>")
 
 
 @app.route("/time")
@@ -44,10 +52,40 @@ def get_info():
     return str(common_data_struct)
 
 
-@app.route("/debug")
-def get_debug():
-    Common.debug = not Common.debug
-    return str(Common.debug)
+@app.route('/settings')
+def get_settings():
+    return render_template('settings.html', Battery=Battery, Common=Common)
+
+
+@app.route('/submit', methods=['POST'])
+def submit():
+    errors = []
+
+    # get grid connect settings
+    high_connect_to_grid_above = int(request.form['high_connect_to_grid_above'])
+    high_disconnect_from_grid_below = int(request.form['high_disconnect_from_grid_below'])
+    low_connect_to_grid_below = int(request.form['low_connect_to_grid_below'])
+    low_disconnect_from_grid_above = int(request.form['low_disconnect_from_grid_above'])
+
+    # get log level
+    Common.log_level = request.form['log_level']
+
+    if high_connect_to_grid_above < high_disconnect_from_grid_below:
+        errors.append("Battery high disconnect needs to be above reconnect")
+    if low_disconnect_from_grid_above < low_connect_to_grid_below:
+        errors.append("Battery low disconnect needs to be below reconnect")
+    if (low_disconnect_from_grid_above > high_connect_to_grid_above
+            or low_connect_to_grid_below > high_disconnect_from_grid_below):
+        errors.append("Battery low values need to be below battery high values")
+
+    if len(errors) == 0:
+        Battery.high_connect_to_grid_above = high_connect_to_grid_above
+        Battery.high_disconnect_from_grid_below = high_disconnect_from_grid_below
+        Battery.low_connect_to_grid_below = low_connect_to_grid_below
+        Battery.low_disconnect_from_grid_above = low_disconnect_from_grid_above
+        return "Form submitted successfully"
+    else:
+        return "Error:" + "\n\t".join(errors)
 
 
 def check_modbus():
@@ -73,14 +111,14 @@ def check_modbus():
 
         modeToSet = readMode
 
-        if soc < 15:
+        if soc < Battery.low_connect_to_grid_below or soc > Battery.high_connect_to_grid_above:
             modeToSet = Mode.value.get("On")
-        elif soc > 20:
+        elif Battery.low_disconnect_from_grid_above < soc < Battery.high_disconnect_from_grid_below:
             modeToSet = Mode.value.get("Inverter Only")
 
         if readMode != modeToSet:
             modeName = Mode.name.get(modeToSet)
-            debug("set mode " + str(modeName))
+            info("set mode " + str(modeName))
             modbus_client.write_register(Register.mode, modeToSet, Device.vebus)
 
         last_seen = datetime.now()
@@ -94,9 +132,16 @@ def check_modbus():
 
 def debug(text):
     timestamp = str(datetime.now())
-    if Common.debug:
+    if Common.log_level == LogLevel.DEBUG:
         print(timestamp + ": " + "DEBUG: " + text)
-    add_to_log_array("DEBUG: " + text)
+        add_to_log_array("DEBUG: " + text)
+
+
+def info(text):
+    timestamp = str(datetime.now())
+    if Common.log_level == LogLevel.DEBUG or Common.log_level == LogLevel.INFO:
+        print(timestamp + ": " + "INFO: " + text)
+        add_to_log_array("INFO: " + text)
 
 
 def error(text):
