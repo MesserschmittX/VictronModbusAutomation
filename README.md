@@ -21,3 +21,11 @@ docker save victron-modbus-automation -o dist/victron-modbus-automation.tar
 
 IMPORT IMAGE:  
 docker load -i dist/victron-modbus-automation.tar
+
+Tag Image:
+docker tag {{image_digest}} neongray/victron-modbus-automation:{{new_version}}
+docker tag {{image_digest}} neongray/victron-modbus-automation:latest
+
+Push Image:
+docker push neongray/victron-modbus-automation:{{new_version}}
+docker push neongray/victron-modbus-automation:latest
